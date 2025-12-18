@@ -302,7 +302,7 @@ export function TranscriptProvider({ children }: { children: ReactNode }) {
             return;
           }
 
-          // Create transcript for buffer with NEW timestamp fields
+          // Create transcript for buffer with timestamp fields and speaker attribution
           const newTranscript: Transcript = {
             id: `${Date.now()}-${transcriptCounter++}`,
             text: update.text,
@@ -311,10 +311,12 @@ export function TranscriptProvider({ children }: { children: ReactNode }) {
             chunk_start_time: update.chunk_start_time,
             is_partial: update.is_partial,
             confidence: update.confidence,
-            // NEW: Recording-relative timestamps for playback sync
+            // Recording-relative timestamps for playback sync
             audio_start_time: update.audio_start_time,
             audio_end_time: update.audio_end_time,
             duration: update.duration,
+            // Speaker attribution: "Me" (microphone) or "Them" (system audio)
+            speaker: update.speaker,
           };
 
           // Add to buffer
@@ -424,6 +426,8 @@ export function TranscriptProvider({ children }: { children: ReactNode }) {
       audio_start_time: update.audio_start_time,
       audio_end_time: update.audio_end_time,
       duration: update.duration,
+      // Speaker attribution: "Me" (microphone) or "Them" (system audio)
+      speaker: update.speaker,
     };
 
     setTranscripts(prev => {

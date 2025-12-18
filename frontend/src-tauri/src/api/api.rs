@@ -137,6 +137,9 @@ pub struct MeetingTranscript {
     pub audio_end_time: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub duration: Option<f64>,
+    // Speaker attribution: "Me" (microphone) or "Them" (system audio)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub speaker: Option<String>,
 }
 
 /// Meeting metadata without transcripts (for pagination)
@@ -181,13 +184,16 @@ pub struct TranscriptSegment {
     pub id: String,
     pub text: String,
     pub timestamp: String,
-    // NEW: Recording-relative timestamps for playback synchronization
+    // Recording-relative timestamps for playback synchronization
     #[serde(skip_serializing_if = "Option::is_none")]
     pub audio_start_time: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub audio_end_time: Option<f64>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub duration: Option<f64>,
+    // Speaker attribution: "Me" (microphone) or "Them" (system audio)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub speaker: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

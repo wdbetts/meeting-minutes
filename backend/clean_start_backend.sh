@@ -279,9 +279,13 @@ if ! kill -0 $PYTHON_PID 2>/dev/null; then
     handle_error "Python backend failed to start"
 fi
 
-# Check if the port is actually listening
+# Check if the ports are actually listening
 if ! lsof -i :$WHISPER_PORT | grep -q LISTEN; then
-    handle_error "Python backend is not listening on port $WHISPER_PORT"
+    handle_error "Whisper server is not listening on port $WHISPER_PORT"
+fi
+
+if ! lsof -i :$PORT | grep -q LISTEN; then
+    handle_error "Python backend is not listening on port $PORT"
 fi
 
 log_success "🎉 All services started successfully!"

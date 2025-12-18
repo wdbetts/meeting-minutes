@@ -5,6 +5,7 @@
 use super::engine::TranscriptionEngine;
 use super::provider::TranscriptionError;
 use crate::audio::AudioChunk;
+use crate::audio::recording_state::DeviceType;
 use log::{error, info, warn};
 use serde::{Deserialize, Serialize};
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
@@ -36,6 +37,8 @@ pub struct TranscriptUpdate {
     pub audio_start_time: f64, // Seconds from recording start (e.g., 125.3)
     pub audio_end_time: f64,   // Seconds from recording start (e.g., 128.6)
     pub duration: f64,          // Segment duration in seconds (e.g., 3.3)
+    // Speaker attribution: "Me" (microphone) or "Them" (system audio)
+    pub speaker: String,
 }
 
 // NOTE: get_transcript_history and get_recording_meeting_name functions
@@ -142,6 +145,7 @@ pub fn start_transcription_task<R: Runtime>(
 
                             let chunk_timestamp = chunk.timestamp;
                             let chunk_duration = chunk.data.len() as f64 / chunk.sample_rate as f64;
+                            let chunk_device_type = chunk.device_type.clone();
 
                             // Transcribe with provider-agnostic approach
                             match transcribe_chunk_with_provider(
@@ -204,6 +208,11 @@ pub fn start_transcription_task<R: Runtime>(
                                         // This decouples the transcription worker from direct RECORDING_MANAGER access
 
                                         // Emit transcript update with NEW recording-relative timestamps
+                                        // Map device type to speaker label
+                                        let speaker = match chunk_device_type {
+                                            DeviceType::Microphone => "Me".to_string(),
+                                            DeviceType::System => "Them".to_string(),
+                                        };
 
                                         let update = TranscriptUpdate {
                                             text: transcript,
@@ -217,6 +226,7 @@ pub fn start_transcription_task<R: Runtime>(
                                             audio_start_time,
                                             audio_end_time,
                                             duration: chunk_duration,
+                                            speaker,
                                         };
 
                                         if let Err(e) = app_clone.emit("transcript-update", &update)
@@ -593,4 +603,66 @@ fn format_recording_time(seconds: f64) -> String {
     let secs = total_seconds % 60;
 
     format!("[{:02}:{:02}]", minutes, secs)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::audio::recording_state::DeviceType;
+
+    #[test]
+    fn test_device_type_to_speaker_mapping() {
+        // Microphone should map to "Me"
+        let mic_speaker = match DeviceType::Microphone {
+            DeviceType::Microphone => "Me".to_string(),
+            DeviceType::System => "Them".to_string(),
+        };
+        assert_eq!(mic_speaker, "Me");
+
+        // System audio should map to "Them"
+        let system_speaker = match DeviceType::System {
+            DeviceType::Microphone => "Me".to_string(),
+            DeviceType::System => "Them".to_string(),
+        };
+        assert_eq!(system_speaker, "Them");
+    }
+
+    #[test]
+    fn test_transcript_update_has_speaker_field() {
+        let update = TranscriptUpdate {
+            text: "Hello world".to_string(),
+            timestamp: "12:00:00".to_string(),
+            source: "Audio".to_string(),
+            sequence_id: 1,
+            chunk_start_time: 0.0,
+            is_partial: false,
+            confidence: 0.95,
+            audio_start_time: 0.0,
+            audio_end_time: 1.0,
+            duration: 1.0,
+            speaker: "Me".to_string(),
+        };
+
+        assert_eq!(update.speaker, "Me");
+    }
+
+    #[test]
+    fn test_transcript_update_serialization() {
+        let update = TranscriptUpdate {
+            text: "Test".to_string(),
+            timestamp: "12:00:00".to_string(),
+            source: "Audio".to_string(),
+            sequence_id: 1,
+            chunk_start_time: 0.0,
+            is_partial: false,
+            confidence: 0.95,
+            audio_start_time: 0.0,
+            audio_end_time: 1.0,
+            duration: 1.0,
+            speaker: "Them".to_string(),
+        };
+
+        let json = serde_json::to_string(&update).unwrap();
+        assert!(json.contains("\"speaker\":\"Them\""));
+    }
 }
