@@ -455,6 +455,8 @@ export default function Home() {
             audio_start_time: event.payload.audio_start_time,
             audio_end_time: event.payload.audio_end_time,
             duration: event.payload.duration,
+            // Speaker attribution: "Me" (microphone) or "Them" (system audio)
+            speaker: event.payload.speaker,
           };
 
           // Add to buffer

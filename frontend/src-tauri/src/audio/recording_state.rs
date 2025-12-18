@@ -441,3 +441,29 @@ impl Clone for RecordingStats {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_audio_chunk_preserves_device_type() {
+        let mic_chunk = AudioChunk {
+            data: vec![0.0f32; 1000],
+            sample_rate: 16000,
+            timestamp: 0.0,
+            chunk_id: 1,
+            device_type: DeviceType::Microphone,
+        };
+        assert_eq!(mic_chunk.device_type, DeviceType::Microphone);
+
+        let system_chunk = AudioChunk {
+            data: vec![0.0f32; 1000],
+            sample_rate: 16000,
+            timestamp: 0.0,
+            chunk_id: 2,
+            device_type: DeviceType::System,
+        };
+        assert_eq!(system_chunk.device_type, DeviceType::System);
+    }
+}

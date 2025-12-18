@@ -282,6 +282,16 @@ export const TranscriptView: React.FC<TranscriptViewProps> = ({ transcripts, isR
             className="mb-3"
           >
             <div className="flex items-start gap-2">
+              {/* Speaker label with color coding */}
+              {transcript.speaker && (
+                <span className={`text-xs font-medium mt-1 flex-shrink-0 min-w-[32px] ${
+                  transcript.speaker === 'Me'
+                    ? 'text-blue-600'
+                    : 'text-green-600'
+                }`}>
+                  {transcript.speaker}
+                </span>
+              )}
               <Tooltip>
                 <TooltipTrigger>
                   <span className="text-xs text-gray-400 mt-1 flex-shrink-0 min-w-[50px]">
