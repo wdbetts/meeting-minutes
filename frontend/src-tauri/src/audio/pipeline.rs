@@ -726,8 +726,12 @@ impl AudioPipeline {
         // Each stream (mic/system) gets its own VAD to independently detect speech
         // This enables "Me" vs "Them" speaker labels in transcripts
         // The VAD processor handles 48kHz->16kHz resampling internally
-
-        let redemption_time = if cfg!(target_os = "macos") { 400 } else { 400 };
+        //
+        // Redemption time (ms): How long to wait after speech ends before finalizing segment
+        // - Bridges natural pauses in speech without excessive fragmentation
+        // - 400ms works well for both macOS (CoreAudio) and Windows (WASAPI)
+        // - Previously macOS used 900ms but 400ms provides better responsiveness
+        let redemption_time = 400;
 
         let vad_processor_mic = match ContinuousVadProcessor::new(sample_rate, redemption_time) {
             Ok(processor) => {
@@ -846,7 +850,7 @@ impl AudioPipeline {
                                         let duration_ms = segment.end_timestamp_ms - segment.start_timestamp_ms;
 
                                         if segment.samples.len() >= 800 {  // Minimum 50ms at 16kHz
-                                            info!("📤 Sending MIC VAD segment (Me): {:.1}ms, {} samples",
+                                            debug!("📤 Sending MIC VAD segment (Me): {:.1}ms, {} samples",
                                                   duration_ms, segment.samples.len());
 
                                             let transcription_chunk = AudioChunk {
@@ -880,7 +884,7 @@ impl AudioPipeline {
                                         let duration_ms = segment.end_timestamp_ms - segment.start_timestamp_ms;
 
                                         if segment.samples.len() >= 800 {  // Minimum 50ms at 16kHz
-                                            info!("📤 Sending SYSTEM VAD segment (Them): {:.1}ms, {} samples",
+                                            debug!("📤 Sending SYSTEM VAD segment (Them): {:.1}ms, {} samples",
                                                   duration_ms, segment.samples.len());
 
                                             let transcription_chunk = AudioChunk {
@@ -907,8 +911,14 @@ impl AudioPipeline {
                                 }
                             }
 
-                            // STEP 5: Mix audio for recording (WAV file) - unchanged
+                            // STEP 5: Mix audio for recording (WAV file)
                             // Recording still gets the mixed audio so playback has both voices
+                            //
+                            // Audio normalization notes:
+                            // - Microphone audio is normalized by EBU R128 to -23 LUFS (broadcast-standard loudness)
+                            // - This matches Netflix/YouTube/Spotify levels for consistent playback
+                            // - System audio remains at natural levels
+                            // - No additional gain is applied to avoid limiting/distortion
                             let mixed_clean = self.mixer.mix_window(&mic_window, &sys_window);
                             if let Some(ref sender) = self.recording_sender_for_mixed {
                                 let recording_chunk = AudioChunk {
@@ -951,7 +961,7 @@ impl AudioPipeline {
                     let duration_ms = segment.end_timestamp_ms - segment.start_timestamp_ms;
 
                     if segment.samples.len() >= 800 {
-                        info!("📤 Sending final MIC VAD segment (Me): {:.1}ms, {} samples",
+                        debug!("📤 Sending final MIC VAD segment (Me): {:.1}ms, {} samples",
                               duration_ms, segment.samples.len());
 
                         let transcription_chunk = AudioChunk {
@@ -968,7 +978,7 @@ impl AudioPipeline {
                             self.chunk_id_counter += 1;
                         }
                     } else {
-                        info!("⏭️ Skipping short final mic segment: {:.1}ms ({} samples < 800)",
+                        debug!("⏭️ Skipping short final mic segment: {:.1}ms ({} samples < 800)",
                               duration_ms, segment.samples.len());
                     }
                 }
@@ -985,7 +995,7 @@ impl AudioPipeline {
                     let duration_ms = segment.end_timestamp_ms - segment.start_timestamp_ms;
 
                     if segment.samples.len() >= 800 {
-                        info!("📤 Sending final SYSTEM VAD segment (Them): {:.1}ms, {} samples",
+                        debug!("📤 Sending final SYSTEM VAD segment (Them): {:.1}ms, {} samples",
                               duration_ms, segment.samples.len());
 
                         let transcription_chunk = AudioChunk {
@@ -1002,7 +1012,7 @@ impl AudioPipeline {
                             self.chunk_id_counter += 1;
                         }
                     } else {
-                        info!("⏭️ Skipping short final system segment: {:.1}ms ({} samples < 800)",
+                        debug!("⏭️ Skipping short final system segment: {:.1}ms ({} samples < 800)",
                               duration_ms, segment.samples.len());
                     }
                 }
@@ -1161,28 +1171,16 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_audio_pipeline_has_dual_vad_processors() {
-        // This test verifies the struct has both VAD processors
-        // Note: Full integration test requires mocking audio streams
-
-        // Verify AudioPipeline struct fields exist by checking compilation
-        // The presence of vad_processor_mic and vad_processor_system
-        // is validated at compile time by the struct definition
-
-        // This test will compile successfully if the fields exist
-        assert!(true);
-    }
-
-    #[test]
     fn test_vad_processor_can_be_instantiated_twice() {
-        // Verify we can create two independent VAD processors
+        // Verify we can create two independent VAD processors for dual-stream processing
+        // This is essential for speaker attribution (separate VAD for mic and system audio)
         let sample_rate = 48000;
         let redemption_time = 400;
 
         let vad1 = ContinuousVadProcessor::new(sample_rate, redemption_time);
         let vad2 = ContinuousVadProcessor::new(sample_rate, redemption_time);
 
-        assert!(vad1.is_ok());
-        assert!(vad2.is_ok());
+        assert!(vad1.is_ok(), "First VAD processor should be created successfully");
+        assert!(vad2.is_ok(), "Second VAD processor should be created successfully");
     }
 }
