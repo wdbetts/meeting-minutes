@@ -14,6 +14,18 @@ pub enum DeviceType {
     System,
 }
 
+impl DeviceType {
+    /// Convert device type to speaker label for transcript attribution
+    /// - Microphone audio is attributed to the local user ("Me")
+    /// - System audio is attributed to remote participants ("Them")
+    pub fn to_speaker_label(&self) -> &'static str {
+        match self {
+            DeviceType::Microphone => "Me",
+            DeviceType::System => "Them",
+        }
+    }
+}
+
 /// Audio chunk with metadata for processing
 #[derive(Debug, Clone)]
 pub struct AudioChunk {
@@ -465,5 +477,14 @@ mod tests {
             device_type: DeviceType::System,
         };
         assert_eq!(system_chunk.device_type, DeviceType::System);
+    }
+
+    #[test]
+    fn test_device_type_to_speaker_label() {
+        // Microphone audio is attributed to local user ("Me")
+        assert_eq!(DeviceType::Microphone.to_speaker_label(), "Me");
+
+        // System audio is attributed to remote participants ("Them")
+        assert_eq!(DeviceType::System.to_speaker_label(), "Them");
     }
 }

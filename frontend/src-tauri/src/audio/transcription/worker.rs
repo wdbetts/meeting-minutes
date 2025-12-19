@@ -207,12 +207,9 @@ pub fn start_transcription_task<R: Runtime>(
                                         // The recording_commands module listens to these events and saves them
                                         // This decouples the transcription worker from direct RECORDING_MANAGER access
 
-                                        // Emit transcript update with NEW recording-relative timestamps
-                                        // Map device type to speaker label
-                                        let speaker = match chunk_device_type {
-                                            DeviceType::Microphone => "Me".to_string(),
-                                            DeviceType::System => "Them".to_string(),
-                                        };
+                                        // Emit transcript update with recording-relative timestamps
+                                        // Map device type to speaker label using centralized method
+                                        let speaker = chunk_device_type.to_speaker_label().to_string();
 
                                         let update = TranscriptUpdate {
                                             text: transcript,
@@ -612,19 +609,12 @@ mod tests {
 
     #[test]
     fn test_device_type_to_speaker_mapping() {
-        // Microphone should map to "Me"
-        let mic_speaker = match DeviceType::Microphone {
-            DeviceType::Microphone => "Me".to_string(),
-            DeviceType::System => "Them".to_string(),
-        };
-        assert_eq!(mic_speaker, "Me");
+        // Test the actual to_speaker_label() method used in production code
+        // Microphone audio is attributed to local user ("Me")
+        assert_eq!(DeviceType::Microphone.to_speaker_label(), "Me");
 
-        // System audio should map to "Them"
-        let system_speaker = match DeviceType::System {
-            DeviceType::Microphone => "Me".to_string(),
-            DeviceType::System => "Them".to_string(),
-        };
-        assert_eq!(system_speaker, "Them");
+        // System audio is attributed to remote participants ("Them")
+        assert_eq!(DeviceType::System.to_speaker_label(), "Them");
     }
 
     #[test]
