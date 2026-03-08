@@ -111,4 +111,5 @@ export interface TranscriptSegmentData {
   endTime?: number; // audio_end_time in seconds
   text: string;
   confidence?: number;
+  speaker?: string; // "Me" (microphone) or "Them" (system audio)
 }
