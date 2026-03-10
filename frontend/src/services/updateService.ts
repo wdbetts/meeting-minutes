@@ -63,7 +63,7 @@ export class UpdateService {
       const currentVersion = await getVersion();
       const update = await check();
 
-      if (update?.available) {
+      if (update && update.available) {
         return {
           available: true,
           currentVersion,
