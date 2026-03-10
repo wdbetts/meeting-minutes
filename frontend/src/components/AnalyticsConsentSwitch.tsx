@@ -77,7 +77,7 @@ export default function AnalyticsConsentSwitch() {
       const store = await load('analytics.json', {
         autoSave: false,
         defaults: {
-          analyticsOptedIn: true
+          analyticsOptedIn: false
         }
       });
       await store.set('analyticsOptedIn', enabled);
