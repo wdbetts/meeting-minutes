@@ -68,7 +68,7 @@ fi
 
 # Generate latest.json for the auto-updater
 SIGNATURE=$(cat "$SIG")
-LATEST_JSON=$(mktemp)
+LATEST_JSON=$(mktemp -d)/latest.json
 cat > "$LATEST_JSON" << EOF
 {
   "version": "$VERSION",
